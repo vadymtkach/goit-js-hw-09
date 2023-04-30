@@ -16,3 +16,23 @@ img {
   display: block;
   max-width: 100%;
 }
+.flatpickr-input{
+  background-color: yellow;
+}
+button{
+  background-color: chartreuse;
+
+}
+button:hover{
+  background-color: #d07d7d;
+}
+.timer{
+  display: flex;
+}
+.field{
+  font-size: 30px;
+  margin-right: 20px;
+}
+.value{
+  color: red;
+}
