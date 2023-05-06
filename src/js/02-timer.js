@@ -1,111 +1,84 @@
 
 
-import flatpickr from "flatpickr";
-import "flatpickr/dist/flatpickr.min.css";
 
-const datePicker = document.querySelector("#datetime-picker");
-const startButton = document.querySelector("[data-start]");
-const days = document.querySelector("[data-days]");
-const hours = document.querySelector("[data-hours]");
-const minutes = document.querySelector("[data-minutes]");
-const seconds = document.querySelector("[data-seconds]");
 
-let intervalId;
+import flatpickr from 'flatpickr';
+import Notiflix from 'notiflix';
+import 'flatpickr/dist/flatpickr.min.css';
 
-flatpickr(datePicker, {
+const refs = {
+  startBtn: document.querySelector('[data-start]'),
+  dataDays: document.querySelector('[data-days]'),
+  dataHours: document.querySelector('[data-hours]'),
+  dataMinutes: document.querySelector('[data-minutes]'),
+  dataSeconds: document.querySelector('[data-seconds]'),
+};
+
+let timer = null;
+let isActive = false;
+refs.startBtn.disabled = true;
+
+flatpickr('#datetime-picker', {
   enableTime: true,
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
-  onClose: (selectedDates) => {
-    const selectedDate = selectedDates[0];
-    const currentDate = Date.now();
-    if (selectedDate <= currentDate) {
-      window.alert("Please choose a date in the future");
-      startButton.disabled = true;
-    } else {
-      startButton.disabled = false;
+  onClose(selectedDates) {
+    if (isActive) return;
+
+    const timeDifference = toGetTimeDifferent(selectedDates[0].getTime());
+    if (timeDifference <= 0) {
+      Notiflix.Notify.failure('Please choose a date in the future', {
+        timeout: 2000,
+      });
+      return;
     }
+
+    refs.startBtn.disabled = false;
+    refs.startBtn.addEventListener('click', () => {
+      isActive = true;
+      refs.startBtn.disabled = true;
+
+      timer = setInterval(() => {
+        const timeDifference = toGetTimeDifferent(selectedDates[0].getTime());
+        const time = convertMs(timeDifference);
+        attachToElement(time);
+      }, 1000);
+    });
   },
 });
 
-function startTimer() {
-  const selectedDate = new Date(datePicker.value).getTime();
-  const currentDate = Date.now();
-  const timeRemaining = selectedDate - currentDate;
-  if (timeRemaining <= 0) {
-    clearInterval(intervalId);
-    resetTimer();
-    return;
+function toGetTimeDifferent(selectedDate) {
+  const now = new Date().getTime();
+  return selectedDate - now;
+}
+
+function attachToElement({ days, hours, minutes, seconds }) {
+  if (days === '00' && hours === '00' && minutes === '00' && seconds === '00') {
+    clearInterval(timer);
   }
-  let totalSeconds = Math.floor(timeRemaining / 1000);
-  let totalMinutes = Math.floor(totalSeconds / 60);
-  let totalHours = Math.floor(totalMinutes / 60);
-  const totalDays = Math.floor(totalHours / 24);
-  seconds.textContent = pad(totalSeconds % 60);
-  minutes.textContent = pad(totalMinutes % 60);
-  hours.textContent = pad(totalHours % 24);
-  days.textContent = pad(totalDays);
-  intervalId = setInterval(() => {
-    totalSeconds--;
-    if (totalSeconds < 0) {
-      clearInterval(intervalId);
-      resetTimer();
-      return;
-    }
-    if (totalSeconds % 60 === 0) {
-      totalMinutes--;
-      if (totalMinutes < 0) {
-        clearInterval(intervalId);
-        resetTimer();
-        return;
-      }
-      if (totalMinutes % 60 === 0) {
-        totalHours--;
-        if (totalHours < 0) {
-          clearInterval(intervalId);
-          resetTimer();
-          return;
-        }
-        if (totalHours % 24 === 0) {
-          totalDays--;
-          if (totalDays < 0) {
-            clearInterval(intervalId);
-            resetTimer();
-            return;
-          }
-          days.textContent = pad(totalDays);
-        }
-        hours.textContent = pad(totalHours % 24);
-      }
-      minutes.textContent = pad(totalMinutes % 60);
-    }
-    seconds.textContent = pad(totalSeconds % 60);
-  }, 1000);
+  refs.dataDays.textContent = days;
+  refs.dataHours.textContent = hours;
+  refs.dataMinutes.textContent = minutes;
+  refs.dataSeconds.textContent = seconds;
 }
 
-startButton.addEventListener("click", startTimer);
-
-function pad(value) {
-  return value.toString().padStart(2, "0");
-}
-
-function resetTimer() {
-  days.textContent = "00";
-  hours.textContent = "00";
-  minutes.textContent = "00";
-  seconds.textContent = "00";
+function addLeadingZero(value) {
+  return String(value).padStart(2, '0');
 }
 
 function convertMs(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const totalMinutes = Math.floor(totalSeconds / 60);
-  const totalHours = Math.floor(totalMinutes / 60);
-  const totalDays = Math.floor(totalHours / 24);
-  return {
-    days: totalDays,
-    hours: totalHours % 24,
-    minutes: totalMinutes % 60,
-    seconds: totalSeconds % 60,
-  };
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  const days = addLeadingZero(Math.floor(ms / day));
+  const hours = addLeadingZero(Math.floor((ms % day) / hour));
+  const minutes = addLeadingZero(Math.floor(((ms % day) % hour) / minute));
+  const seconds = addLeadingZero(
+    Math.floor((((ms % day) % hour) % minute) / second)
+  );
+
+  return { days, hours, minutes, seconds };
 }
